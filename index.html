@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réviser le Français</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* --- ÉCRAN D'ACCUEIL --- */
+        #ecran-accueil {
+            text-align: center;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .titre-app {
+            color: #0d6efd;
+            margin-bottom: 30px;
+        }
+
+        .btn-niveau {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 1.1rem;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            color: #212529;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        .btn-niveau:hover:not(:disabled) {
+            background-color: #e9ecef;
+            border-color: #ced4da;
+        }
+
+        /* Style pour un niveau verrouillé */
+        .btn-niveau.verrouille {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            border-style: dashed;
+        }
+
+        .btn-niveau small {
+            font-size: 0.85rem;
+            font-weight: normal;
+            color: #6c757d;
+        }
+
+        /* --- ÉCRAN D'EXERCICE --- */
+        #ecran-exercice {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #en-tete {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            color: #495057;
+            font-weight: bold;
+        }
+
+        #phrase-container {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            line-height: 2;
+            text-align: center;
+            min-height: 80px;
+        }
+
+        .mot {
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s ease;
+        }
+
+        .mot:hover { background-color: #e2e6ea; }
+
+        #feedback {
+            display: none;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+        }
+
+        .succes { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .erreur { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .bouton-action {
+            padding: 12px 24px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.2s;
+            margin: 5px;
+        }
+
+        .bouton-action:hover { background-color: #0b5ed7; }
+
+        #btn-suivant { display: none; background-color: #198754; }
+        #btn-suivant:hover { background-color: #157347; }
+
+        /* --- ÉCRAN DE FIN --- */
+        #ecran-fin {
+            display: none;
+            text-align: center;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        #score-final {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ecran-accueil">
+        <h1 class="titre-app">Réviser le Français</h1>
+        <p>Choisissez votre module d'entraînement :</p>
+        
+        <button id="btn-basique" class="btn-niveau" onclick="lancerSession('Basique')">
+            Module Basique
+        </button>
+        
+        <button id="btn-avance" class="btn-niveau" onclick="lancerSession('Avancé')">
+            Module Avancé
+        </button>
+    </div>
+
+    <div id="ecran-exercice">
+        <div id="en-tete">
+            <div id="compteur">Phrases restantes : -</div>
+            <div id="score-actuel">Précision : 0%</div>
+        </div>
+
+        <div id="feedback"></div>
+        <div id="phrase-container"></div>
+
+        <div id="zone-boutons">
+            <button id="btn-pas-faute" class="bouton-action">Il n'y a pas de faute</button>
+            <button id="btn-suivant" class="bouton-action">Continuer ➔</button>
+        </div>
+    </div>
+
+    <div id="ecran-fin">
+        <h2>Session terminée ! 🎉</h2>
+        <p>Votre taux de réussite du premier coup :</p>
+        <div id="score-final">0%</div>
+        <button class="bouton-action" onclick="retourAccueil()">Retour au menu</button>
+    </div>
+
+    <script src="data.js"></script>
+
+    <script>
+        // --- VARIABLES GLOBALES ---
+        let niveauEnCours = ""; // Permet de savoir quel niveau on est en train de jouer
+        let fileExercices = []; 
+        let totalExercicesInitiaux = 0;
+        let scorePremierCoup = 0; 
+        let exerciceActuel = null;
+        let aEchoueAExerciceActuel = false; 
+
+        // --- ÉLÉMENTS DU DOM ---
+        const ecranAccueil = document.getElementById('ecran-accueil');
+        const ecranExercice = document.getElementById('ecran-exercice');
+        const ecranFin = document.getElementById('ecran-fin');
+        
+        const btnBasique = document.getElementById('btn-basique');
+        const btnAvance = document.getElementById('btn-avance');
+
+        const container = document.getElementById('phrase-container');
+        const feedback = document.getElementById('feedback');
+        const btnPasFaute = document.getElementById('btn-pas-faute');
+        const btnSuivant = document.getElementById('btn-suivant');
+        const compteur = document.getElementById('compteur');
+        const affichageScore = document.getElementById('score-actuel');
+        const scoreFinal = document.getElementById('score-final');
+
+        // --- LOGIQUE DU MENU ET DES SAUVEGARDES ---
+
+        // Fonction pour lire les scores et mettre à jour l'affichage des boutons
+        function rafraichirMenu() {
+            // On récupère les scores dans le navigateur (ou 0 si on n'a jamais joué)
+            let scoreBasique = parseInt(localStorage.getItem('score_Basique')) || 0;
+            let scoreAvance = parseInt(localStorage.getItem('score_Avancé')) || 0;
+
+            // Mise à jour du bouton Basique
+            btnBasique.innerHTML = `Module Basique <br><small>Meilleur score : ${scoreBasique}%</small>`;
+
+            // Logique de déverrouillage du bouton Avancé (> 85%)
+            if (scoreBasique > 85) {
+                btnAvance.disabled = false;
+                btnAvance.classList.remove('verrouille');
+                btnAvance.innerHTML = `Module Avancé <br><small>Meilleur score : ${scoreAvance}%</small>`;
+            } else {
+                btnAvance.disabled = true;
+                btnAvance.classList.add('verrouille');
+                btnAvance.innerHTML = `Module Avancé 🔒<br><small>(Nécessite plus de 85% en Basique)</small>`;
+            }
+        }
+
+        // --- LOGIQUE DE L'APPLICATION ---
+
+        function lancerSession(niveauChoisi) {
+            niveauEnCours = niveauChoisi; // On mémorise le niveau joué
+            fileExercices = baseDeDonnees.filter(exercice => exercice.niveau === niveauChoisi);
+            totalExercicesInitiaux = fileExercices.length;
+            scorePremierCoup = 0;
+
+            ecranAccueil.style.display = 'none';
+            ecranExercice.style.display = 'flex'; 
+            
+            chargerExercice();
+        }
+
+        function retourAccueil() {
+            ecranFin.style.display = 'none';
+            rafraichirMenu(); // On recalcule l'affichage des cadenas et scores
+            ecranAccueil.style.display = 'block';
+        }
+
+        function mettreAJourScore() {
+            const pourcentage = totalExercicesInitiaux > 0 ? Math.round((scorePremierCoup / totalExercicesInitiaux) * 100) : 0;
+            affichageScore.textContent = `Précision : ${pourcentage}%`;
+            return pourcentage;
+        }
+
+        function chargerExercice() {
+            if (fileExercices.length === 0) {
+                afficherEcranFin();
+                return;
+            }
+
+            container.innerHTML = ''; 
+            feedback.style.display = 'none';
+            btnPasFaute.style.display = 'inline-block';
+            btnSuivant.style.display = 'none';
+            container.style.pointerEvents = 'auto';
+
+            exerciceActuel = fileExercices[0];
+            aEchoueAExerciceActuel = false; 
+            
+            compteur.textContent = `Phrases restantes : ${fileExercices.length}`;
+            mettreAJourScore();
+
+            const mots = exerciceActuel.texte.split(' ');
+            mots.forEach(mot => {
+                const span = document.createElement('span');
+                span.textContent = mot + ' ';
+                span.className = 'mot';
+                span.addEventListener('click', () => verifierReponse(mot));
+                container.appendChild(span);
+            });
+        }
+
+        function verifierReponse(motClique) {
+            const motPropre = motClique.replace(/[.,!?]/g, '');
+            if (exerciceActuel.contient_erreur && motPropre === exerciceActuel.mot_errone) {
+                traiterResultat(true);
+            } else {
+                traiterResultat(false);
+            }
+        }
+
+        btnPasFaute.addEventListener('click', () => {
+            if (!exerciceActuel.contient_erreur) {
+                traiterResultat(true);
+            } else {
+                traiterResultat(false);
+            }
+        });
+
+        function traiterResultat(estCorrect) {
+            if (estCorrect) {
+                if (!aEchoueAExerciceActuel) { scorePremierCoup++; }
+                fileExercices.shift();
+                afficherFeedback(true, "Bravo ! Bonne réponse. <br><br>💡 " + exerciceActuel.explication);
+            } else {
+                aEchoueAExerciceActuel = true;
+                const exerciceRate = fileExercices.shift();
+                fileExercices.push(exerciceRate);
+                afficherFeedback(false, "Faux ! Cette phrase reviendra plus tard. <br><br>💡 " + exerciceActuel.explication);
+            }
+        }
+
+        function afficherFeedback(estCorrect, message) {
+            feedback.style.display = 'block';
+            feedback.innerHTML = message;
+            feedback.className = estCorrect ? 'succes' : 'erreur';
+            
+            container.style.pointerEvents = 'none';
+            btnPasFaute.style.display = 'none';
+            
+            mettreAJourScore();
+            btnSuivant.style.display = 'inline-block';
+        }
+
+        btnSuivant.addEventListener('click', () => {
+            chargerExercice();
+        });
+
+        function afficherEcranFin() {
+            ecranExercice.style.display = 'none';
+            const pourcentageFinal = mettreAJourScore();
+            
+            // --- SAUVEGARDE DU SCORE ---
+            // On récupère l'ancien meilleur score pour ce niveau
+            let ancienMeilleurScore = parseInt(localStorage.getItem('score_' + niveauEnCours)) || 0;
+            
+            // Si le nouveau score est meilleur, on lécrase dans le Local Storage
+            if (pourcentageFinal > ancienMeilleurScore) {
+                localStorage.setItem('score_' + niveauEnCours, pourcentageFinal);
+            }
+            
+            ecranFin.style.display = 'block';
+            scoreFinal.textContent = `${pourcentageFinal}%`;
+        }
+
+        // Au lancement de la page, on initialise le menu avec les scores sauvegardés
+        rafraichirMenu();
+
+    </script>
+</body>
+</html>
